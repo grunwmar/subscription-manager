@@ -66,6 +66,7 @@ RHSM_REGISTRATION_REQUIRED = 5
 
 class ComplianceManager:
     def __init__(self, on_date: Optional[datetime] = None):
+        log.warning("Compliance manager initialized")
         self.cp_provider: CPProvider = inj.require(inj.CP_PROVIDER)
         self.product_dir: ProductDirectory = inj.require(inj.PROD_DIR)
         self.entitlement_dir: EntitlementDirectory = inj.require(inj.ENT_DIR)
@@ -129,20 +130,9 @@ class ComplianceManager:
 
         self.valid_entitlement_certs = []
 
-        self._parse_server_status()
-
-    def get_compliance_status(self) -> Optional[Dict]:
-        """
-        Try to get compliance status from server to get fresh information about compliance status.
-        :return: Compliance status, when server of cache is available. Otherwise None is returned.
-        """
-        status_cache: EntitlementStatusCache = inj.require(inj.ENTITLEMENT_STATUS_CACHE)
-        self.status = status_cache.load_status(
-            self.cp_provider.get_consumer_auth_cp(), self.identity.uuid, self.on_date
-        )
-        return self.status
-
     def _parse_server_status(self) -> None:
+        log.warning("Parse server status incapacitated")
+        return
         """Fetch entitlement status info from server and parse."""
 
         if not self.is_registered():
@@ -159,25 +149,9 @@ class ComplianceManager:
         # TODO: we're now mapping product IDs to entitlement cert JSON,
         # previously we mapped to actual entitlement cert objects. However,
         # nothing seems to actually use these, so it may not matter for now.
-        self.valid_products = status["compliantProducts"]
 
-        self.partially_valid_products = status["partiallyCompliantProducts"]
 
-        self.partial_stacks = status["partialStacks"]
-
-        if "reasons" in status:
-            self.supports_reasons = True
-            self.reasons = Reasons(status["reasons"], self)
-
-        if "status" in status and len(status["status"]):
-            self.system_status = status["status"]
-        # Some old candlepin versions do not return 'status' with information
-        elif status["nonCompliantProducts"]:
-            self.system_status = INVALID
-        elif self.partially_valid_products or self.partial_stacks or self.reasons.reasons:
-            self.system_status = PARTIAL
-        else:
-            self.system_status = UNKNOWN
+        self.system_status = UNKNOWN
 
         # For backward compatability with old find first invalid date,
         # we drop one second from the compliant until from server (as
@@ -186,12 +160,7 @@ class ComplianceManager:
         # invalid from midnight to midnight.
         self.compliant_until: Optional[datetime] = None
 
-        if status["compliantUntil"] is not None:
-            self.compliant_until = parse_date(status["compliantUntil"])
 
-        # Lookup product certs for each unentitled product returned by
-        # the server:
-        unentitled_pids: List[str] = status["nonCompliantProducts"]
         # When using SCA, the compliance status does not include the installed
         # products.
         if not is_sca:
