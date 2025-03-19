@@ -33,12 +33,11 @@ log = logging.getLogger(__name__)
 class EntitlementDBusImplementation(base_object.BaseImplementation):
     def get_status(self, on_date: str) -> dict:
         """Get status of entitlements."""
-        on_date: Union[str, datetime.datetime] = None if on_date == "" else self._parse_date(on_date)
 
         uep: UEPConnection = self.build_uep(options={})
         service = EntitlementService(uep)
         try:
-            status: dict = service.get_status(on_date=on_date, force=True)
+            status: dict = service.get_status(force=True)
         except Exception as exc:
             log.exception(exc)
             raise dbus.DBusException(str(exc))
